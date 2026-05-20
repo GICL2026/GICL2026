@@ -243,8 +243,11 @@
 
   /* ── SUCCESS ── */
   #success-page {
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    min-height:100vh; align-items:center; justify-content:center;
     padding:2rem; text-align:center;
+  }
+  #success-page.active {
+    display:flex;
   }
   .success-card {
     background:var(--dark2); border:1px solid rgba(212,160,23,0.3);
@@ -465,13 +468,13 @@
 
 <!-- ═══════════════ SUCCESS ═══════════════ -->
 <div id="success-page" class="page">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
   <div class="success-card">
     <div class="success-icon">🏆</div>
     <h3>You're Registered!</h3>
     <p>Welcome to <strong>GICL 2026</strong>. Your registration has been received.<br><br>
     Please ensure you share the payment screenshot on <strong>+91 97386 93949</strong>. Your spot is confirmed only after payment verification.</p>
-    <br>
-    <button class="btn-primary" onclick="showPage('landing')" style="width:100%;margin-top:0.5rem;">Back to Home</button>
+  </div>
   </div>
 </div>
 
@@ -489,6 +492,11 @@ function showPage(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
 }
+
+// Always start on landing page
+window.addEventListener('load', function() {
+  showPage('landing');
+});
 
 // ── Age group selection ──
 let selectedAgeGroup = "";
@@ -563,23 +571,27 @@ async function submitForm() {
     ageGroup: selectedAgeGroup,
     jersey,
     paymentStatus: payStatus,
-    paymentScreenshot: screenshotBase64 ? "[Screenshot Attached]" : "Not uploaded",
+    paymentScreenshot: screenshotBase64 || "",
     timestamp: new Date().toLocaleString()
   };
 
   // Save locally always
   const local = JSON.parse(localStorage.getItem('gicl_registrations') || '[]');
-  local.push(data);
+  local.push({...data, paymentScreenshot: screenshotBase64 ? "[Screenshot Attached]" : "Not uploaded"});
   localStorage.setItem('gicl_registrations', JSON.stringify(local));
 
-  // Send to Google Sheets if URL is set
+  // Send to Google Sheets via form POST (works with no-cors + large payloads)
   if (SHEET_URL && SHEET_URL !== "YOUR_APPS_SCRIPT_URL_HERE") {
     try {
+      const formData = new FormData();
+      formData.append('payload', JSON.stringify(data));
+      if (screenshotFile) {
+        formData.append('screenshot', screenshotFile, screenshotFile.name);
+      }
       await fetch(SHEET_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: formData
       });
     } catch(e) {
       console.log('Sheet sync failed, saved locally:', e);
