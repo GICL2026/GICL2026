@@ -1,2 +1,2 @@
 # GICL2026
-REGISTRATIONS CLOSED!!
+gulshan ikebana champions league
